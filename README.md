@@ -43,6 +43,7 @@ OrcaBOT competes in the RoboCup Small Size League, which means a team of autonom
 - **CrystalEyes**: a CNC-based digital microscope system costing 10k–15k THB to build, which automates crystallization screening that commercial systems charge over 1M THB for. I've been building and iterating it since high school; it has been demonstrated on lysozyme growth and MOF studies.
 - **Autolocate**: a condo parking management backend in SQL and Express.js, with a three-tier connection pool for role-based access control and JWT authentication over HttpOnly cookies. [Source on GitHub](https://github.com/Warit-Yuv/Autolocate_Backend).
 - **CareAir**: a proof-of-concept carbon capture machine for classrooms. First place in the Physical Wellness Track at Thammasat Hackathon: Future Wellness 2024.
+- **Bedroom Tree**: an indoor CO2 capture concept using the carbonic anhydrase enzyme, a semifinalist idea at the Thailand Innovation Award 2023.
 
 ## Around the world
 
