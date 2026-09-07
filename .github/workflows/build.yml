@@ -1,0 +1,51 @@
+name: Build CVs
+
+on:
+  push:
+    paths:
+      - "**.tex"
+      - "resume.cls"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile LaTeX
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: |
+            Warit_CV.tex
+            Resume.tex
+          latexmk_use_lualatex: false
+
+      - name: Copy PDFs to repo root
+        run: |
+          cp Warit_CV.pdf Warit_CV.pdf
+          cp Resume.pdf Resume.pdf
+
+      - name: Generate preview images
+        run: |
+          sudo apt-get update && sudo apt-get install -y poppler-utils
+          mkdir -p assets
+          pdftoppm -png -r 110 -f 1 -l 2 Warit_CV.pdf assets/Warit_CV_preview
+          pdftoppm -png -r 110 -f 1 -l 2 Resume.pdf assets/Resume_preview
+          mv assets/Warit_CV_preview-1.png assets/Warit_CV_p1.png 2>/dev/null || true
+          mv assets/Warit_CV_preview-2.png assets/Warit_CV_p2.png 2>/dev/null || true
+          mv assets/Resume_preview-1.png assets/Resume_p1.png 2>/dev/null || true
+          mv assets/Resume_preview-2.png assets/Resume_p2.png 2>/dev/null || true
+          ls assets
+
+      - name: Commit updated PDFs and previews
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Warit_CV.pdf Resume.pdf assets/ || true
+          git diff --cached --quiet || (git commit -m "Auto-build: update CV PDFs and previews [skip ci]" && git push)
