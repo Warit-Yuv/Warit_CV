@@ -26,11 +26,6 @@ jobs:
             Resume.tex
           latexmk_use_lualatex: false
 
-      - name: Copy PDFs to repo root
-        run: |
-          cp Warit_CV.pdf Warit_CV.pdf
-          cp Resume.pdf Resume.pdf
-
       - name: Generate preview images
         run: |
           sudo apt-get update && sudo apt-get install -y poppler-utils
