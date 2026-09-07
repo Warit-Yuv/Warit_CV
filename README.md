@@ -4,70 +4,64 @@
   <img src="assets/portrait.png" width="140" alt="Warit Yuvaniyama"/>
 </p>
 
-**Fourth-year Computer Engineering Student** · Sirindhorn International Institute of Technology (SIIT), Thammasat University
-CGPA 3.92 · Academic Outstanding Student Scholarship
+Fourth-year Computer Engineering student at Sirindhorn International Institute of Technology (SIIT), Thammasat University. CGPA 3.92, recipient of the Academic Outstanding Student Scholarship.
 
-I work at the intersection of **embedded systems, robotics, and machine learning** — building the software that lets robots perceive and act, and doing research that pushes those same ideas forward. Currently President of the SIIT Robotic Club (**OrcaBOT**), preparing to compete in **RoboCup Japan Open**, and contributing to peer-reviewed research in sensor fusion, Thai NLP, and reinforcement learning.
+I like exploring many fields and seeing the things I build come together. That itch has taken me a lot of places: automatic soccer and rescue robots with my club and in international workshops, a coastal monitoring project, spacecraft fuel planning, a DIY crystal-screening machine built for 10k THB that does what commercial systems charge 1M+ for, and a Thai poetry rhyme checker that grew out of my hobby of reading classical verse. What ties them together for me is connecting ideas from different fields to make something new, and then getting up in front of an audience to present or pitch it, which is why I usually end up as the presenter on my teams.
+
+The biggest of these is OrcaBOT, the SIIT Robotic Club I'm currently President of. Being club president (managing teams, budgets, procurement) and embedded systems lead (communication, control, microcontrollers, the low-level stuff) taught me how much invisible work sits between "we have parts" and "we have a robot." Our team built ours from close to nothing to a functioning machine competing in the Small Size League at RoboCup Japan Open 2025, and I'm really proud of that. I also enjoy the business side of engineering: analyzing problems and turning them into pitches, which has led to a few hackathon and startup competition wins, and I make a point of working across cultures. Some of my closest collaborators are people I first met as strangers at a workshop in another country.
 
 [![Build CVs](https://github.com/Warit-Yuv/Warit_CV/actions/workflows/build.yml/badge.svg)](https://github.com/Warit-Yuv/Warit_CV/actions/workflows/build.yml)
 
----
+## My CV
 
-## 📄 Curriculum Vitae
-
-Full details of my education, experience, publications, and awards are in the documents below — compiled fresh from LaTeX on every push.
+Full details are in the documents below. GitHub Actions recompiles them from the LaTeX sources on every push, so what's committed here is current.
 
 | Document | First page | Download |
 |---|---|---|
-| **CV** (extended, complete record) | ![](assets/Warit_CV_p1.png) | [Warit_CV.pdf](Warit_CV.pdf) |
-| **Resume** (1–2 pages) | ![](assets/Resume_p1.png) | [Resume.pdf](Resume.pdf) |
+| CV (extended, complete record) | ![](assets/Warit_CV_p1.png) | [Warit_CV.pdf](Warit_CV.pdf) |
+| Resume (1–2 pages) | ![](assets/Resume_p1.png) | [Resume.pdf](Resume.pdf) |
 
-## 🔬 Research
+## Research
 
-My research sits where perception, learning, and language meet real-world constraints:
+**Seeing when cameras can't.** At the Measurement and Intelligence Systems Lab at Kansai University, I built a sensor fusion pipeline combining a TI IWR1443 mmWave radar with a FLIR Boson 320 thermal camera on a TurtleBot3. The goal was navigation in smoke-filled spaces, where RGB cameras and LiDAR both fall over. That meant writing ROS2 drivers, calibrating sensor extrinsics, streaming 16-bit radiometric thermal frames, and fusing everything with ApproximateTimeSynchronizer so radar point clouds could be depth-colored and displayed in real time.
 
-- **Multimodal perception for degraded environments** — During a research internship at the Measurement & Intelligence Systems Lab (Kansai University, Japan), I built a **mmWave radar + thermal imaging fusion pipeline** on ROS2, enabling a TurtleBot3 to navigate in smoke-filled conditions where cameras and LiDAR fail — including real-time depth-colored radar point clouds and hardware-accelerated 16-bit radiometric thermal streaming.
-- **Thai natural language processing** — First author of a hybrid rule-based rhyme verification system for classical Thai poetry (*Klon*), merged into [PyThaiNLP](https://github.com/PyThaiNLP/PyThaiNLP) and evaluated on 36,475 stanzas; it also serves as a deterministic reward signal for GenAI-based poetry generation (iSAI-NLP 2026, in review).
-- **Reinforcement learning for control** — Physics-informed reward shaping for fuel-efficient orbital transfer (~10% fuel reduction, IEICE Trans. Communications) and online recursive least-squares refinement of legged-locomotion controllers on a Unitree Go2 (IEEE/SICE SII 2027).
-- **Computer vision for environmental monitoring** — Applied the Fast Segment Anything Model to water surface level estimation for coastal erosion monitoring; published in Springer LNCS vol. 15585 (IUKM 2025) and presented in Vietnam and Bangkok.
+**Thai poetry and NLP.** This grew out of my hobby of reading classical Thai poetry. Our senior project (iSAI-NLP 2026, in review) builds rhyme verification for *Klon-Paed*, and my main part was rewriting [KhaveeVerifier](https://github.com/PyThaiNLP/pythainlp/blob/main/pythainlp/khavee/core.py), PyThaiNLP's rule-based checker: vowel analysis, final-consonant classes, the rhyme test, and silent-letter handling, now merged [into PyThaiNLP 5.3.5](https://github.com/PyThaiNLP/pythainlp/pull/1453) as the default. On that base we added a G2P override dictionary of 4,000+ entries and compared five configurations on 36,475 stanzas (145,709 rhyme checks). It's also [live as a web tool](https://klon-pad-rhyme-checker.streamlit.app/), and a deterministic checker like this works as a reward signal for training models to compose Klon.
 
-A full publication list is in the [CV](Warit_CV.pdf).
+**Learning-based control.** Two current projects: physics-informed reward shaping for fuel-efficient orbital transfer with PPO (about 10% less peak fuel, IEICE Transactions on Communications), and online recursive least-squares refinement of legged-locomotion controllers, tested on a Unitree Go2, which brought heading error from 26.3° down to 5.5° (IEEE/SICE SII 2027).
 
-## 🤖 Robotics & Leadership
+**Environmental monitoring.** With NECTEC, I applied the Fast Segment Anything Model to water surface level estimation for coastal monitoring. This was published in Springer LNCS vol. 15585 (IUKM 2025) and presented in Vietnam and Bangkok.
 
-As **President & Embedded Systems Lead of OrcaBOT** (SIIT Robotic Club), I lead a 30-member team building automatic soccer robots for the **Small Size League**, managing a 100,000+ THB procurement budget along the way. On the technical side, I've written custom C++ motor-control libraries, holonomic drive algorithms, and redesigned our serial and wireless nRF communication stack for responsiveness and stability — and I was primary author of the software architecture section of our [RoboCup 2024 Team Description Paper](https://ssl.robocup.org/wp-content/uploads/2024/04/2024_TDP_OrcaBOT.pdf).
+The full publication list is in the [CV](Warit_CV.pdf).
 
-## 🚀 Startups & Projects
+## Robotics
 
-- **[FlashLight](https://flashlight.in.th)** — Co-founded a study-planning platform that breaks 368+ A-Level topics into personalized daily missions for Thai students preparing for the TCAS admission exam. Reached **Top 5** of 80+ teams in the Startup Thailand League and ranked **#7 in Education** on the Thai App Store with our iOS MVP.
-- **CrystalEyes** — A low-cost CNC-based digital microscope system (10k–15k THB) automating crystallization screening, replicating functionality of commercial systems costing 1M+ THB. Built and iterated from high school through university; demonstrated on lysozyme and MOF studies.
-- **Autolocate** — A condo parking-management backend in SQL and Express.js with a three-tier connection pool, role-based access control, and JWT/HttpOnly-cookie authentication. [Source on GitHub](https://github.com/Warit-Yuv/Autolocate_Backend).
-- **CareAir** — 1st Place (Physical Wellness Track), Thammasat Hackathon: Future Wellness 2024 — a proof-of-concept carbon capture machine for classrooms and workplaces.
+OrcaBOT competes in the RoboCup Small Size League, which means a team of autonomous soccer robots where embedded software, electrical, and mechanical work all have to line up. As President and Embedded Systems Lead, I coordinate across those four departments, manage a procurement budget of over 100,000 THB, and have personally written the low-level side: custom C++ motor-control libraries, holonomic drive algorithms, and a reworked serial and nRF wireless communication stack. I also wrote the software architecture section of our [RoboCup 2024 Team Description Paper](https://ssl.robocup.org/wp-content/uploads/2024/04/2024_TDP_OrcaBOT.pdf).
 
-## 🌏 International Experience
+## Startups and projects
 
-Research and workshops have taken me to Japan (Kansai University internship, OIT-SIIT iPBL workshops), Taiwan (PBL Workshop, Taipei Tech), Vietnam (IUKM 2025), and Singapore (Sustainability Startathon finalist) — experiences that taught me to collaborate across languages, disciplines, and time zones.
+- **[FlashLight](https://flashlight.in.th)**: co-founder. A study-planning platform that breaks 368+ A-Level topics into daily missions for students preparing for the TCAS admission exam. We reached the Top 5 of 80+ teams in the Startup Thailand League, and our iOS MVP ranked #7 in Education on the Thai App Store.
+- **CrystalEyes**: a CNC-based digital microscope system costing 10k–15k THB to build, which automates crystallization screening that commercial systems charge over 1M THB for. I've been building and iterating it since high school; it has been demonstrated on lysozyme growth and MOF studies.
+- **Autolocate**: a condo parking management backend in SQL and Express.js, with a three-tier connection pool for role-based access control and JWT authentication over HttpOnly cookies. [Source on GitHub](https://github.com/Warit-Yuv/Autolocate_Backend).
+- **CareAir**: a proof-of-concept carbon capture machine for classrooms. First place in the Physical Wellness Track at Thammasat Hackathon: Future Wellness 2024.
 
-## 📬 Contact
+## Around the world
 
-- **Email:** [6622770459@g.siit.tu.ac.th](mailto:6622770459@g.siit.tu.ac.th)
-- **LinkedIn:** [warit-yuvaniyama](https://www.linkedin.com/in/warit-yuvaniyama/)
-- **GitHub:** [@Warit-Yuv](https://github.com/Warit-Yuv)
+Some of this work has taken me abroad. The two-month research internship at Kansai University in Japan was the deepest stretch: I joined the Measurement and Intelligence Systems Lab full-time and shipped the radar-thermal fusion pipeline described above. Before that, I was a workshop participant and later a staff member at the OIT-SIIT international PBL workshops in Osaka (the second one in a staff role, handling logistics and mentoring for the rescue-robot track), and I spent eight days at Taipei Tech building an autonomous vehicle in a team drawn from twelve universities. The conference side brought presentations in Vietnam (IUKM 2025) and Bangkok, and Singapore hosted a sustainability startathon where we were finalists. Moving between these environments, I've gotten used to working with people across languages and time zones, and it's one of the parts of this work I value most.
+
+## Contact
+
+- Email: [6622770459@g.siit.tu.ac.th](mailto:6622770459@g.siit.tu.ac.th)
+- LinkedIn: [warit-yuvaniyama](https://www.linkedin.com/in/warit-yuvaniyama/)
+- GitHub: [@Warit-Yuv](https://github.com/Warit-Yuv)
 
 ---
 
-## 🛠️ How this repository works
+## About this repository
 
-- `Warit_CV.tex` / `Resume.tex` — LaTeX sources, built on the custom [`resume.cls`](resume.cls) (based on Trey Hunner's resume class)
-- `.github/workflows/build.yml` — CI pipeline: compiles both documents, then commits the updated PDFs and the preview images in [`assets/`](assets) back to the repository automatically
-- Every push to a `.tex` or `.cls` file keeps the previews and PDFs above up to date — no manual rebuilds needed
+- `Warit_CV.tex` and `Resume.tex` are the LaTeX sources. The document class, [`resume.cls`](resume.cls), is based on Trey Hunner's resume class.
+- [.github/workflows/build.yml](.github/workflows/build.yml) compiles both documents with GitHub Actions and commits the updated PDFs and preview images (in `assets/`) automatically. You don't need to rebuild anything manually.
+- To build locally: `pdflatex -interaction=nonstopmode Warit_CV.tex`
 
-To build locally:
+## License
 
-```
-pdflatex -interaction=nonstopmode Warit_CV.tex
-```
-
-## LICENSE
-
-The contents of this repository are provided under the [MIT License](LICENSE). The `resume.cls` template retains its original notice (© Trey Hunner).
+The contents of this repository are under the [MIT License](LICENSE). The `resume.cls` template keeps its original notice (© Trey Hunner).
