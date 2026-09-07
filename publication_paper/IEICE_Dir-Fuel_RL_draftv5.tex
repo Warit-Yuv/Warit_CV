@@ -1,0 +1,589 @@
+\documentclass[paper]{ieice}
+%\usepackage[dvips]{graphicx}
+\usepackage[pdftex]{graphicx,xcolor}% for pdflatex
+%\usepackage[dvipdfmx]{graphicx,xcolor}% for platex or uplatex
+\usepackage[fleqn]{amsmath}
+\usepackage{newtxtext}
+\usepackage[varg]{newtxmath}
+\usepackage{algorithm} % for Algorithm Overview section
+\usepackage{algorithmic}
+
+%% <local definitions>
+\def\ClassFile{\texttt{ieice.cls}}
+\newcommand{\PS}{{\scshape Post\-Script}}
+\newcommand{\AmSLaTeX}{%
+ $\mathcal A$\lower.4ex\hbox{$\!\mathcal M\!$}$\mathcal S$-\LaTeX}
+\def\BibTeX{{\rmfamily B\kern-.05em
+ \textsc{i\kern-.025em b}\kern-.08em
+  T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\hyphenation{man-u-script}
+\makeatletter
+\def\tmpcite#1{\@ifundefined{b@#1}{\textbf{?}}{\csname b@#1\endcsname}}%
+\makeatother
+%% </local definitions>
+
+% Field: A - Fundamental, B - Communications, C - Electronics, D - Information and Systems 
+% (According to calls for paper EB - https://www.ieice.org/eng/s_issue/cfp/2027_6EB.pdf)
+\field{B}
+\vol{110}
+\no{6}
+\SpecialSection{Space, Aeronautical and Navigation Electronics in conjunction with Main Topics of ICSANE2025}
+%\SpecialIssue{}
+\title[Direction-Aware Reward Shaping for Fuel-Efficient Orbital Transfer using Reinforcement Learning]
+      {Direction-Aware Reward Shaping for Fuel-Efficient Orbital Transfer using Reinforcement Learning}
+% \titlenote{This paper was presented at ...}
+\authorlist{%
+ \authorentry[6622782280@g.siit.tu.ac.th]{Julathit Chetsawang}{n}{labelA}\MembershipNumber{}
+ \authorentry[6622770459@g.siit.tu.ac.th]{Warit Yuvaniyama}{n}{labelA}\MembershipNumber{}
+ \authorentry[prachya@siit.tu.ac.th]{Prachya Boonkwan}{m}{labelA}\MembershipNumber{2680855}
+}
+%\breakauthorline{2}
+\affiliate[labelA]{The School of Information,
+Computer and Communication Technology (ICT)
+Sirindhorn International Institute of Technology,
+Thammasat University, 99 Moo 18, Pathum Thani 12120, Thailand}
+% \affiliate[labelB]{The Faculty ...}
+%\affiliate[labelB]{The 
+%\EICdepartment{\texttt{[department]}}
+%\EICorganization{\texttt{[organization]}}
+%\EICaddress{\texttt{[address]}}
+%}
+% \paffiliate[labelC]{Presently, }
+\received{2026}{7}{10}
+% \revised{2026}{8}{1}
+
+\begin{document}
+%\linenumbers
+%%\linenumberdisplaymath
+%%\realpagewiselinenumbers
+%%\runninglinenumbers
+%%\pagewiselinenumbers
+\maketitle
+
+\begin{summary}
+As Earth's orbital environment grows increasingly congested, autonomous spacecraft navigation via Artificial Intelligence (AI) and reinforcement learning (RL) has emerged as a critical research frontier. However, standard model-free RL approaches treat well-established orbital dynamics as a black box, relying on pure trial-and-error to minimize scalar distance penalties. In this work, we identify a key limitation in existing reward designs and propose a direction-aware reward shaping method that explicitly incorporates thrust alignment into the learning objective. Built on the high-fidelity OrbitZoo environment, where rewards are not predefined, we design a physically-informed reward that jointly optimizes orbital accuracy and fuel efficiency by integrating Jacobian mechanics into the RL framework. By linearizing equinoctial state transitions using a first-order Taylor expansion ($\Delta \mathbf{s} \approx \mathbf{B} \mathbf{u}$), the proposed alignment reward penalizes maneuvers that violate theoretical orbital physics. Experimental results demonstrate improved convergence and reduced fuel consumption compared to baseline reward formulations, with the full model achieving strict convergence on eccentricity and inclination errors below the 0.005 and 0.001 tolerances, respectively. The direction-aware agent reduces average peak fuel expenditure by approximately 10\% across independent training runs. Furthermore, sensitivity analysis identifies that the alignment scaling factor must exceed $k = 10$ to effectively constrain the policy, demonstrating that embedding physical domain knowledge into reward design yields operationally significant propellant savings.
+\end{summary}
+\begin{keywords}
+Orbital transfer, autonomous navigation, reinforcement learning, PPO, reward shaping, fuel efficiency
+\end{keywords}
+
+\section{Introduction}
+\label{intro}
+
+The rapid growth of satellite constellations and space-based infrastructure has significantly increased the complexity of orbital operations. Modern missions require precise and autonomous navigation capabilities for tasks such as orbital transfer \cite{zaidi2023cascaded}, station-keeping \cite{bonasera2023stationkeeping}, and collision avoidance \cite{kazemi2024,qu2022spacecraft}. At the same time, the limited onboard fuel of spacecraft imposes strict constraints on control strategies, making fuel efficiency a critical objective in mission design \cite{tipaldi2022}.
+
+Orbital transfer, in particular, represents a fundamental yet challenging control problem. Small inefficiencies in thrust application can lead to significant deviations in orbital parameters, requiring corrective maneuvers that further consume fuel. In large-scale space-station systems and satellite constellations, such inefficiencies accumulate, increasing operational costs and reducing mission lifespan.
+
+Recent advances in Artificial Intelligence (AI), specifically reinforcement learning (RL), have enabled data-driven approaches to control in complex, nonlinear systems. RL methods, especially policy gradient algorithms such as Proximal Policy Optimization (PPO), have demonstrated strong performance in continuous control problems \cite{schulman2017ppo,kazemi2024}. In the context of astrodynamics, RL enables autonomous agents to learn control policies directly from interaction with simulated environments, reducing reliance on handcrafted control laws.
+High-fidelity environments such as OrbitZoo provide realistic simulation capabilities by incorporating perturbative forces and validated orbital propagation models \cite{orbitzoo}. These environments enable the development of RL-based solutions that better approximate real-world conditions. However, a key limitation remains: the design of the reward function.
+
+In OrbitZoo, rewards are not predefined, requiring users to explicitly define task objectives. While this provides flexibility, it also introduces a critical challenge. Poorly designed rewards often lead to unintended behaviors, such as excessive thrust usage or inefficient maneuvering, even when the agent successfully reaches the target orbit. Furthermore, standard model-free RL approaches suffer from fundamental scaling and efficiency issues because they treat well-established orbital dynamics as a black box, forcing agents to relearn the mathematical mechanics of spaceflight through brute-force trial and error.
+
+From a control perspective, optimal orbital maneuvers are not solely defined by reaching a target state but also by how efficiently the trajectory is executed. Classical orbital mechanics emphasizes the importance of thrust direction, where tangential thrust maximizes energy efficiency in maneuvers such as Hohmann transfers.
+
+To overcome the limitations of purely distance-based optimization, this paper proposes a novel direction-aware reward shaping approach that integrates physical insights into the learning objective. By incorporating directional alignment, derived from the equinoctial control Jacobian, into the reward function, the proposed method guides RL agents toward energy-efficient control strategies. Specifically, this paper introduces two key innovations:
+
+\begin{enumerate}
+    \item \textbf{Direction-Aware Reward Formulation:} We introduce a novel reward shaping technique that leverages a first-order Taylor expansion of orbital dynamics ($\Delta \mathbf{s} \approx \mathbf{B} \mathbf{u}_t$) to penalize thrust vectors that deviate from classical astrodynamic efficiency.
+    \item \textbf{Operationally Significant Fuel Savings:} Through rigorous multi-run evaluation, we show that embedding this physical constraint yields an average 10\% reduction in peak fuel expenditure, and we identify the critical hyperparameter threshold ($k \ge 10$) required to enforce this alignment.
+\end{enumerate}
+
+The remainder of this paper is organized as follows: Section~\ref{RelatedWork} reviews related work in orbital dynamics simulation and reinforcement learning for spacecraft control. Section~\ref{Methodology}  details the proposed methodology, including the Jacobian linearization of orbital dynamics and the formulation of the direction-aware reward. Section~\ref{Results}  presents the experimental setup, comparative orbital accuracy, and fuel efficiency results. Section~\ref{Discussion}  provides a discussion on the operational impact and the reward complexity trade-off. Finally, Section~\ref{FutureWorks} outlines limitations and future work, and Section~\ref{Conclusion}  concludes the paper.
+
+\section{Related Work}
+\label{RelatedWork}
+
+\subsection{Orbital Dynamics Simulation}
+Accurate simulation of orbital dynamics is essential for developing and validating control strategies. Tools such as Orekit provide high-fidelity modeling of spacecraft motion, incorporating perturbations including atmospheric drag, solar radiation pressure, and third-body gravitational effects \cite{orekit}. These capabilities enable realistic propagation of orbital trajectories, which is crucial for training RL agents in environments that reflect real-world conditions.
+
+Python-based libraries such as Poliastro offer accessible alternatives for orbit propagation and visualization, although they typically provide lower fidelity compared to Orekit. Commercial tools such as Systems Tool Kit (STK) provide advanced capabilities but are often limited by accessibility constraints.
+
+\subsection{Reinforcement Learning for Spacecraft Control}
+Reinforcement learning has been applied to various spacecraft control problems, from attitude stabilization \cite{retagne2024adaptive} and satellite scheduling \cite{herrmann2023comparative} to station-keeping \cite{bonasera2023stationkeeping}. Early work focused on simplified models such as the Circular Restricted Three-Body Problem (CR3BP) and lunar orbit path constraints \cite{scorsoglio2023relative}, enabling tractable experimentation but limiting real-world applicability.
+
+More recent studies have applied deep RL algorithms such as PPO and DDPG to continuous control problems in orbital dynamics. PPO, in particular, has shown strong performance due to its stability and ability to handle high-dimensional action spaces \cite{schulman2017ppo}. Applications include low-thrust trajectory optimization and satellite maneuver planning \cite{Zavoli2020RL_low_thrust,zaidi2023cascaded}. Additionally, proximity operations and multi-impulse rendezvous have seen significant adoption of deep RL techniques \cite{hovell2021deep,federici2021deep,xu2023optimal}.
+
+Collision avoidance has also been explored using RL, where agents learn to perform evasive maneuvers under uncertainty \cite{kazemi2024,qu2022spacecraft}. However, many of these approaches rely on simplified dynamics or synthetic environments, limiting their ability to generalize to realistic scenarios.
+
+\subsection{High-Fidelity RL Environments}
+OrbitZoo represents a significant advancement by integrating RL with high-fidelity orbital simulation through Orekit \cite{orekit}. It supports multi-agent scenarios (building upon frameworks like PettingZoo \cite{terry2021pettingzoo}) and realistic thrust modeling, enabling research on complex coordination and control tasks. Despite these advances, OrbitZoo does not prescribe a reward function, leaving reward design as an open problem. This flexibility highlights the importance of principled reward engineering in achieving meaningful learning outcomes.
+
+\subsection{Reward Design in Reinforcement Learning}
+Reward shaping is a critical component of RL, influencing both learning efficiency and policy quality. In continuous control tasks, poorly designed rewards can lead to suboptimal or unstable behavior. Most existing work in orbital RL focuses on minimizing state error or achieving mission objectives without explicitly considering control efficiency. However, in physical systems, optimal control is governed by underlying principles such as energy efficiency and directional alignment. Incorporating such principles into reward design can improve both performance and interpretability, motivating our proposed direction-aware reward formulation.
+
+\section{Methodology}
+\label{Methodology}
+
+\subsection{Markov Decision Process for Orbital Transfer}
+We model the orbital transfer as a continuous control problem within a Markov Decision Process (MDP), defined by the tuple $(\mathcal{S}, \mathcal{A}, P, R)$, where
+\begin{itemize}
+    \item $\mathcal{S}$ is a set of states called the state space,
+
+    \item $\mathcal{A}$ is a set of actions called the action space,
+
+    \item $P_a (\mathbf{s}, \mathbf{s}')$ is the probability that action $a$ in state $\mathbf{s}$ will lead to state $\mathbf{s}'$ in the next timestep, and
+
+    \item $R_a (\mathbf{s}, \mathbf{s}')$ is the immediate reward received after action $a$ is taken for state transition $(\mathbf{s}, \mathbf{s}')$.
+\end{itemize}
+Unlike generic models that rely on Cartesian coordinates, our state space $\mathcal{S}$ is explicitly defined by a 5-dimensional vector of equinoctial orbital elements. At each timestep $t$, the agent observes:
+\begin{eqnarray}
+    \mathbf{s}_t
+    & = &
+    [a, e_x, e_y, h_x, h_y]^\top
+\end{eqnarray}
+where $a$ is the semi-major axis, and the remaining terms define the orbital eccentricity and inclination vectors. The agent outputs a continuous thrust action $\mathbf{u}_t \in \mathbb{R}^3$, and the environment evolves according to the highly non-linear orbital dynamics $\mathbf{s}_{t+1} = f(\mathbf{s}_t, \mathbf{u}_t)$.
+
+In the model-free baseline approach, the reward is derived primarily from a weighted scalar improvement between the current state and the target orbit. Let the state error vector be defined as $\mathbf{E}_t = |\mathbf{s}_t - \mathbf{s}_{\mathrm{target}}|$. The baseline improvement reward $R_{\mathrm{imp}}$ calculates the step-by-step reduction in this error relative to the target scale:
+\begin{eqnarray}
+    R_{\mathrm{imp}}
+    & = &
+    \sum_{i=1}^{5} \alpha_i \frac{E_{t-1, i} - E_{t, i}}{s_{\mathrm{target}, i}},
+\end{eqnarray}
+where $\alpha_i$ represents the weighting coefficients for each equinoctial element. While this encourages convergence, it provides no physical or directional feedback. The agent is forced to discover how 3D thrust translates into equinoctial changes purely through trial and error, resulting in highly inefficient fuel expenditure.
+
+\subsection{Jacobian Linearization of Orbital Dynamics}
+To provide the agent with physical intuition, we must relate the instantaneous continuous thrust action $\mathbf{u}_t$ directly to the geometric change in the orbit. The generic discrete-time state transition function $\mathbf{s}_{t+1} = f(\mathbf{s}_t, \mathbf{u}_t)$ can be approximated using a first-order multivariate Taylor series expansion around an arbitrary nominal operating point $(\mathbf{s}_0, \mathbf{u}_0)$:
+\begin{align}
+    f(\mathbf{s}, \mathbf{u})
+    \quad \approx \quad &
+    f(\mathbf{s}_0, \mathbf{u}_0) + \frac{\partial f}{\partial \mathbf{s}}\bigg|_{(\mathbf{s}_0, \mathbf{u}_0)} (\mathbf{s} - \mathbf{s}_0) \\
+    & \quad {} + \frac{\partial f}{\partial \mathbf{u}}\bigg|_{(\mathbf{s}_0, \mathbf{u}_0)} (\mathbf{u} - \mathbf{u}_0) \nonumber \\
+    & \quad {} + \mathcal{O}(\|\mathbf{s} - \mathbf{s}_0\|^2, \|\mathbf{u} - \mathbf{u}_0\|^2) \nonumber
+\end{align}
+
+To evaluate the specific effect of the agent's thrust decision at the timestep $t$, we define our nominal expansion point as the current state under a ballistic unforced trajectory. Therefore, we set $\mathbf{s}_0 = \mathbf{s}_t$ and $\mathbf{u}_0 = \mathbf{0}$. The actual parameters evaluated are the current state $\mathbf{s} = \mathbf{s}_t$ and the applied continuous thrust action $\mathbf{u} = \mathbf{u}_t$. Because $(\mathbf{s}_t - \mathbf{s}_t) = \mathbf{0}$, the Jacobian state term is canceled completely. Substituting these values into the general expansion yields:
+\begin{eqnarray}
+    f(\mathbf{s}_t, \mathbf{u}_t)
+    & \approx &
+    f(\mathbf{s}_t, \mathbf{0})
+    % + \frac{\partial f}{\partial \mathbf{s}}\bigg|_{(\mathbf{s}_t, \mathbf{0})} \!(\mathbf{s}_t \!-\! \mathbf{s}_t)
+    + \frac{\partial f}{\partial \mathbf{u}}\bigg|_{(\mathbf{s}_t, \mathbf{0})} \!(\mathbf{u}_t \!- \mathbf{0}).
+\end{eqnarray}
+% \mathindent=7mm
+% \begin{equation}
+% \begin{split}
+%     f(\mathbf{s}_t, \mathbf{u}_t) &\approx f(\mathbf{s}_t, \mathbf{0}) + \frac{\partial f}{\partial \mathbf{s}}\bigg|_{(\mathbf{s}_t, \mathbf{0})} \!(\mathbf{s}_t - \mathbf{s}_t) \\
+%     &\quad + \frac{\partial f}{\partial \mathbf{u}}\bigg|_{(\mathbf{s}_t, \mathbf{0})} \!(\mathbf{u}_t - \mathbf{0}).
+% \end{split}
+% \end{equation}
+By neglecting the higher-order terms under the assumption that the thrust magnitude is small over the discrete time interval $\Delta t$, the equation simplifies the isolation of the linear contribution of the engine:
+\begin{eqnarray}
+    \mathbf{s}_{t+1}
+    & \approx &
+    f(\mathbf{s}_t, \mathbf{0}) + \frac{\partial f}{\partial \mathbf{u}}\bigg|_{(\mathbf{s}_t, \mathbf{0})} \mathbf{u}_t.
+\end{eqnarray}
+
+We derive the reward function using an ideal two-body framework. Because equinoctial elements are constant without thrust or perturbations, the unforced state transition simplifies to $f(\mathbf{s}_t, \mathbf{0}) = \mathbf{s}_t$. While the actual simulation continuously applies orbital perturbations, removing them from the control matrix $\mathbf{B}$ allows us to evaluate the agent's thrust vector directly, bypassing the need for computationally expensive real-time perturbation models.
+
+By defining the change in the state vector as \mbox{$\Delta \mathbf{s} = \mathbf{s}_{t+1} \!-\! \mathbf{s}_t$}, the relationship depends entirely on the first derivative of the dynamics with respect to the control input. Substituting the control Jacobian matrix \mbox{$\mathbf{B} = \frac{\partial f}{\partial \mathbf{u}}$}, the relationship elegantly simplifies to:
+\begin{eqnarray}
+    \Delta \mathbf{s}
+    & \approx &
+    \mathbf{B} \mathbf{u}_t.
+\end{eqnarray}
+This linearization bridges classical orbital mechanics and the RL framework, allowing us to explicitly calculate the predicted orbital shift for any given thrust vector.
+
+\subsection{Direction-Aware Reward Formulation}
+Building on this linearization, we evaluate the physical validity of the agent's chosen action. The agent's action $\mathbf{u}_t$ is projected through the normalized Jacobian to produce a predicted state change vector:
+\begin{eqnarray}
+    d\mathbf{x}_{\mathrm{pred}}
+    & = &
+    \frac{\mathbf{B}}{\|\mathbf{B}\|} \mathbf{u}_t.
+\end{eqnarray}
+Simultaneously, we define the normalized error vector pointing from the current orbit to the target where the division is applied element-wise:
+\begin{eqnarray}
+    \mathbf{e}
+    & = &
+    \frac{\mathbf{s}_t - \mathbf{s}_{\mathrm{target}}}{\mathbf{s}_{\mathrm{target}}}.
+\end{eqnarray}
+
+To quantify the directional accuracy of the maneuver, we calculate the negative cosine similarity between these two vectors, scaled by a constant factor. This yields the alignment reward $R_{\mathrm{align}}$:
+\begin{eqnarray}
+    R_{\mathrm{align}}
+    & = &
+    -k \left( \frac{\mathbf{e} \cdot d\mathbf{x}_{\mathrm{pred}}}{\|\mathbf{e}\| \|d\mathbf{x}_{\mathrm{pred}}\|} \right),
+\end{eqnarray}
+where $k$ controls the magnitude of the directional penalty. Based on empirical tuning to balance this penalty against the state improvement reward, we set $k = 10$ for all experiments presented in this paper. An ablation study for the effects of $k$ is provided in Section~\ref{Alignment-Penalty}.
+
+\subsection{Final Composite Reward Function}
+To synthesize the baseline progress metric and the physical alignment, we first define a core reward signal $R_{\mathrm{core}}$ that integrates the equinoctial state improvement ($R_{\mathrm{imp}}$) with the Jacobian alignment scalar ($R_{\mathrm{align}}$):
+\begin{eqnarray}
+    R_{\mathrm{core}}
+    & = &
+    \alpha_{\mathrm{imp}} R_{\mathrm{imp}} + \alpha_{\mathrm{align}} R_{\mathrm{align}},
+\end{eqnarray}
+where $\alpha_{\mathrm{imp}}$ and $\alpha_{\mathrm{align}}$ are structural weighting coefficients.
+
+The final composite reward function $R_t$ is strictly evaluated only when the agent actively triggers the spacecraft's thrusters, defined by an activation threshold ($\delta > 0.5$). The formulation scales this core reward by the normalized thrust magnitude ($T/T_{\max}$) and subtracts a secondary penalty based on the explicit angular alignment error ($\theta$):
+\begin{eqnarray}
+    R_t
+    & = &
+    \mathbb{I}_{\delta > 0.5} \left( \alpha_1 \frac{T}{T_{\max}} R_{\mathrm{core}} - \alpha_2 \frac{\theta}{\theta_{\max}} \right),
+\end{eqnarray}
+where $\mathbb{I}_{\delta > 0.5}$ is an indicator function that activates the reward only when the thrust decision $\delta$ exceeds 0.5, $\alpha_1$ and $\alpha_2$ are the importance weights assigned to orbital progress and along-track directional alignment, respectively, and $\theta_{\max}$ represents the maximum allowable angular deviation.
+
+By actively penalizing this angular mismatch ($\frac{\theta}{\theta_{\max}}$), the reward effectively restricts the agent's viable action space. Rather than relying on classical Cartesian heuristics, this formulation mathematically forces the agent to balance state error minimization with strict adherence to linearized astrodynamic theory. It natively discourages physically wasteful maneuvers, ensuring the agent only expends propellant when the thrust vector optimally aligns with the required orbital correction.
+
+\subsection{Integration with PPO}
+The reward is used within the PPO clipped surrogate objective:
+\begin{eqnarray}
+    L^{\mathrm{CLIP}}(\theta)
+    & = &
+    \mathbb{E} \bigg[ \!\min\! \Big( r_t(\theta)\hat{A}_t, 
+R^{\textrm{CLIP}} \hat{A}_t \Big) \!\bigg],
+\end{eqnarray}
+% \mathindent=7mm
+% \begin{equation}
+% \begin{split}
+%     L^{\mathrm{CLIP}}(\theta) &= \mathbb{E} \bigg[ \min \Big( r_t(\theta)\hat{A}_t, \\
+%     &\quad \mathrm{clip}\big(r_t(\theta), 1-\epsilon, 1+\epsilon\big)\hat{A}_t \Big) \bigg],
+% \end{split}
+% \end{equation}
+where $\hat{A}_t$ is computed using generalized advantage estimation (GAE), and $R^{\textrm{CLIP}}$ is the clipped reward.
+\begin{eqnarray}
+    R^{\textrm{CLIP}}
+    & = &
+    \mathrm{clip}\big(r_t(\theta), 1 \!- \epsilon, 1 \!+ \epsilon\big)
+\end{eqnarray}
+By improving the physical quality of the reward signal via Jacobian alignment, we directly improve the advantage estimation, leading to more mathematically stable and fuel-efficient policy learning.
+
+By explicitly maximizing the cosine similarity between the Jacobian-predicted state change and the equinoctial error vector, this formulation embeds directional efficiency directly into the advantage estimation $\hat{A}_t$. This ensures that the policy gradient updates heavily penalize off-axis thrusting, naturally steering the PPO agent toward a more conservative and fuel-efficient policy.
+
+\subsection{Algorithm Overview}
+The complete training procedure, including the conditional evaluation of the direction-aware composite reward, is summarized in Algorithm \ref{alg:jacobian_ppo}. The agent first assesses the state error against the equinoctial tolerance thresholds. If the orbital parameters have not yet converged and the engine is actively triggered, the control Jacobian $\mathbf{B}$ is dynamically evaluated to score the alignment of the thrust vector. Otherwise, the agent defaults to the baseline scalar improvement behavior.
+
+\begin{algorithm}[tb]
+\caption{Direction-Aware PPO with Tolerance Masking}
+\label{alg:jacobian_ppo}
+\begin{algorithmic}[1]
+\STATE Initialize policy $\pi_{\theta_{ppo}}$ and value function $V_{\phi}$
+\STATE Initialize OrbitZoo environment with equinoctial state space
+\FOR{each episode}
+    \STATE Reset environment, obtain initial state $s_0$ and target $s_{\mathrm{target}}$
+    \FOR{each timestep $t$}
+        \STATE Sample continuous action vector $a_t \in [-1, 1]^4 \sim \pi_{\theta_{ppo}}(s_t)$
+        \STATE Execute action, observe next state $s_{t+1}$
+        
+        \STATE Compute absolute state error: $E_t \leftarrow |s_{\mathrm{target}} - s_t|$
+        
+        \IF{$E_t \le \mathrm{tolerance}$ for all elements}
+            \STATE $R_t \leftarrow 0.0$, Episode succeeds
+            \STATE \textbf{continue}
+        \ENDIF
+        
+        \STATE Create deadband mask: $M \leftarrow E_t > \mathrm{tolerance}$
+        \STATE Compute masked relative improvement $P_t$ using coefficients $\alpha_i$
+        
+        \IF{engine trigger is active ($a_t[3] \geq 0$)}
+            \STATE Extract 3D thrust vector $u_t = a_t[:3]$
+            \STATE Compute equinoctial control Jacobian $B$ at $s_t$
+            \STATE Compute normalized error: $e \leftarrow (s_t - s_{\mathrm{target}}) / s_{\mathrm{target}}$
+            
+            \STATE Predict orbital shift: $dx_{\mathrm{pred}} \leftarrow \frac{B}{\|B\|} u_t$
+            \STATE Compute alignment: $R_{\mathrm{align}} \leftarrow -10 \times \frac{e \cdot dx_{\mathrm{pred}}}{\|e\|\,\|dx_{\mathrm{pred}}\|}$
+            
+            \STATE $R_{\mathrm{core}} \leftarrow \alpha_{\mathrm{imp}} R_{\mathrm{imp}} + \alpha_{\mathrm{align}} R_{\mathrm{align}}$
+            
+            \STATE Extract normalized thrust: $T_{\mathrm{norm}} \leftarrow (a_t[0] + 1) / 2$
+            \STATE Extract normalized angle penalty: $\theta_{\mathrm{norm}} \leftarrow (a_t[1] + 1) / 2$
+            
+            \STATE $R_t \leftarrow T_{\mathrm{norm}} \times (\alpha_1 R_{\mathrm{core}}) - (\alpha_2 \theta_{\mathrm{norm}})$
+        \ELSE
+            \STATE $R_t \leftarrow R_{\mathrm{old}}$ (Baseline reward behavior)
+        \ENDIF
+        
+        \STATE Store transition $(s_t, a_t, R_t, s_{t+1})$
+    \ENDFOR
+    \STATE Update policy and value networks using PPO surrogate objective
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\section{Experimental Results}
+\label{Results}
+
+\subsection{Setup}
+Experiments are conducted on a Hohmann transfer scenario based on OrbitZoo official codebase. PPO agents are trained under identical hyperparameters for fair comparison. The primary metrics of interest are training convergence speed (measured in episodes), targeting accuracy across all equinoctial orbital elements, and operational fuel efficiency measured by total $\Delta V$ expended to reach the target orbit. Our observation shows that the thrust action space is set at $[-1, 1]$ and the thrust indicator threshold is set at $0$.\cite{orbitzoo}
+
+\subsection{Training Hyperparameters and Experimental Setup}
+To ensure reproducibility, the complete set of hyperparameters used for training the Proximal Policy Optimization (PPO) agent is detailed in Table \ref{tab:ppo_params}. Notably, we utilize separate learning rates for the actor and critic networks, and implement a continuous action standard deviation decay schedule to encourage early exploration while ensuring stable convergence in the later stages of training.
+
+\begin{table}[tb]
+\caption{PPO Training Hyperparameters}
+\label{tab:ppo_params}
+\begin{center}
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Actor learning rate & $1 \times 10^{-4}$ \\
+Critic learning rate & $1 \times 10^{-3}$ \\
+Discount factor ($\gamma$) & 0.99 \\
+GAE parameter ($\lambda$) & 0.95 \\
+Clip ratio ($\epsilon$) & 0.1 \\
+Rollout buffer size (Experiences) & 4096 \\
+Batch size & 64 \\
+Epochs per update & 5 \\
+Initial action std dev & 0.4 \\
+Std dev decay rate & 40,000 steps \\
+Std dev decay amount & 0.05 \\
+Minimum action std dev & 0.05 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+To isolate and quantify the impact of the proposed Jacobian alignment constraint, we conduct two primary experiments by modulating the reward weighting coefficients, $\alpha_1$ and $\alpha_2$, as shown in Table \ref{tab:exp_setup}. Experiment 1 serves as the model-free baseline, rewarding only equinoctial state progress. Experiment 2 introduces the physics-informed directional penalty.
+
+\begin{table}[tb]
+\caption{Experimental Reward Configurations}
+\label{tab:exp_setup}
+\begin{center}
+\begin{tabular}{|l|c|c|l|}
+\hline
+\textbf{Configuration} & $\alpha_1$ & $\alpha_2$ & \textbf{Reward Function} \\
+\hline
+agent 1 (Baseline) & 1.0 & 0.5 & $R_{\mathrm{imp}}$ only \\
+agent 2 (Direction-aware) & 1.0 & 0.5 & $R_{\mathrm{imp}} + R_{\mathrm{align}}$ \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{Baseline Normalization Issue}
+
+During replication of the OrbitZoo baseline, we identified a structural mismatch in the official implementation: the environment normalizes the current observation state but does not apply equivalent normalization to the target state. This scale discrepancy makes it impossible to reproduce the performance claimed in the original publication. While prior work reports targeting error as low as 100 meters, our rigorous reproduction using the official codebase reveals a true convergence limit of approximately $2 \times 10^4$ meters for the semi-major axis. We therefore adopt this verified plateau as the control benchmark for fair comparison.
+
+\subsection{Orbital Accuracy Results}
+
+Both agents converge toward a semi-major axis error ($\Delta a$) boundary imposed by the verified OrbitZoo normalization limit described above. However, as shown in Fig.~\ref{fig:trajectory}, the model-free baseline agent (blue) exhibits a more aggressive reduction in $\Delta a$, settling near $2.5 \times 10^4$ meters with relatively low variance. In contrast, the proposed direction-aware agent (orange) exhibits persistent oscillation and maintains a higher error floor. 
+
+A similar trend is observed across the remaining equinoctial elements. The baseline agent successfully drives both eccentricity ($e_x$, $e_y$) and inclination ($h_x$, $h_y$) errors to near-zero steady states by the end of training. The direction-aware agent, while successfully stabilizing these components, converges to a marginally higher error floor. 
+
+This divergence reflects an inherent trade-off in the control design, where prioritizing propellant conservation inherently relaxes the constraints on orbital state convergence. The baseline agent achieves its superior geometric accuracy because its permissive reward function encourages continuous, unrestricted thrusting to aggressively minimize scalar distance. 
+
+Conversely, the proposed direction-aware agent accepts a slightly wider orbital tolerance as a direct consequence of its restricted action space. By mathematically penalizing thrust vectors that do not align with the Jacobian-predicted orbital shift, the agent learns to suppress continuous firing. It purposefully withholds corrective maneuvers unless they are highly energy-efficient. Therefore, the slightly higher geometric error visualized in Fig.~\ref{fig:trajectory} is the necessary and expected cost of the mathematically enforced fuel conservation demonstrated in the subsequent analysis.
+
+\subsection{Fuel Efficiency Results}
+
+Fuel efficiency is the primary objective of this work, and the results shown in Fig.~\ref{fig:fuel} demonstrate a clear, mathematically consistent reduction in propellant consumption across multiple independent runs.The baseline agent begins accumulating fuel expenditure aggressively from approximately episode 100 onward, ultimately reaching an average peak consumption of roughly 50 units by episode 200. The proposed method, averaged across independent trials, peaks at approximately 45 units over the same training window, representing a 10\% reduction in average peak fuel expenditure.
+
+The direction-aware agent, by contrast, maintains near-zero fuel usage for the majority of training and exhibits a much more gradual and controlled expenditure profile in later episodes. This behavior directly reflects the design intent of the alignment reward: by penalizing thrust vectors that do not align with the Jacobian-predicted orbital correction direction, the agent learns to fire its engines selectively and purposefully rather than continuously.
+
+\begin{table}[tb]
+\caption{Quantitative Performance Comparison between the state-only baseline and the proposed direction-aware agent.}
+\label{tab:fuel_results}
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Method} & \textbf{Peak Fuel} & \textbf{$e_x$, $e_y$ Error} & \textbf{$h_x$, $h_y$ Error} \\
+\hline
+Baseline & $\sim$50 units & $< 0.005$ & $< 0.001$ \\
+Proposed & $\sim$45 units & $< 0.005$ & $< 0.001$ \\
+\hline
+\textbf{Reduction} & \textbf{$\sim$10\%} & \textbf{Converged} & \textbf{Converged} \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+Table~\ref{tab:fuel_results} summarizes the behavioral comparison between the two configurations. As shown in Fig.~\ref{fig:fuel}, the cumulative fuel expenditure of the baseline agent increases steeply and erratically from approximately episode 100, while the proposed agent maintains a gradual and controlled profile throughout. This divergence is a direct consequence of the alignment reward withholding positive signal unless the thrust vector is geometrically productive, demonstrating that orbital accuracy and fuel efficiency are complementary objectives when the reward correctly encodes the underlying mechanics.
+
+\subsection{Computational Overhead}
+
+The proposed method introduces two additional operations at each active engine step relative to the scalar baseline: derivation of the $5 \times 3$ equinoctial control Jacobian $\mathbf{B}$, and computation of the cosine similarity between $d\mathbf{x}_{\mathrm{pred}}$ and the normalized error $\mathbf{e}$. Crucially, $\mathbf{B}$ is computed via a closed-form analytical expression derived from the Gauss Variational Equations in equinoctial form, rather than by numerical differentiation. This bounds the per-step overhead to a fixed matrix operation whose cost does not grow with training. The dominant computational expense at each timestep remains the high-fidelity Orekit orbital propagation, not the reward calculation, making the proposed method practical on standard hardware without additional infrastructure.
+
+\subsection{Ablation Study}
+
+To rigorously evaluate the proposed methodology, we compare the training performance and the final fuel efficiency of the agent under two distinct reward configurations:
+
+\begin{itemize}
+\item \textbf{Baseline}: The agent is trained using only the baseline improvement in the equinoctial state. With the alignment penalty deactivated ($\alpha_2 = 0$), the reward simplifies to strictly rewarding progress scaled by thrust magnitude: 
+\begin{eqnarray}
+    R_t
+    & = &
+    \mathbb{I}_{\delta > 0.5} \left( \alpha_1 \frac{T}{T_{\max}} R_{\mathrm{imp}} - \alpha_2 \frac{\theta}{\theta_{\max}} \right).
+\end{eqnarray}
+
+\item \textbf{Proposed (Direction-aware)}: The agent is trained using the complete proposed architecture. This configuration mathematically enforces physics-based directional adherence by activating the angular alignment penalty ($\alpha_2 = 0.5$): 
+\begin{eqnarray}
+    R_t
+    & = &
+    \mathbb{I}_{\delta > 0.5} \left( \alpha_1 \frac{T}{T_{\max}} R_{\mathrm{core}} - \alpha_2 \frac{\theta}{\theta_{\max}} \right).
+\end{eqnarray}
+\end{itemize}
+
+Results show that the fuel penalty reduces excessive thrust usage, the direction alignment term significantly improves convergence speed, and the full model achieves the best trade-off between efficiency and accuracy.
+
+% \begin{figure}[tb]
+% \centerline{\includegraphics[width=0.5\textwidth]{figure/errorAnalysis_fuel_smoothed_w10.pdf}}
+% \caption{Fuel consumption comparison across methods. The proposed direction-aware agent (orange) maintains a more controlled fuel expenditure profile throughout training, achieving approximately 10\% reduction in peak consumption ($\sim$45 vs $\sim$50 units) relative to the baseline (blue).}
+% \label{fig:fuel}
+% \end{figure}
+
+% \begin{figure}[tb]
+% \centerline{\includegraphics[width=0.5\textwidth]{figure/errorAnalysis_reward_smoothed_w10.pdf}}
+% \caption{Reward comparison across methods.}
+% \label{fig:reward}
+% \end{figure}
+
+\begin{figure}[tb]
+\centerline{\includegraphics[width=0.5\textwidth]{figure/agentREcompar_fuel_smoothed_w10.pdf}}
+\caption{Fuel consumption comparison across multiple independent training runs. The proposed direction-aware agent (orange trends, 3 runs) maintains a strictly controlled fuel expenditure profile throughout training. This mathematically enforces a lower upper-bound on consumption, achieving an average 10\% reduction in peak fuel expenditure ($\sim$45 units) relative to the erratic baseline (blue trends, 2 runs).}
+\label{fig:fuel}
+\end{figure}
+
+\begin{figure}[tb]
+\centerline{\includegraphics[width=0.5\textwidth]{figure/agentREcompar_reward_smoothed_w10.pdf}}
+\caption{Cumulative reward accumulation across multiple independent training runs. Due to the strict angular alignment constraints, the proposed agent (orange) experiences slower initial reward growth compared to the permissive baseline (blue). However, this stricter optimization landscape ultimately guides the proposed agent to a more disciplined, fuel-optimized policy plateau.}
+\label{fig:reward}
+\end{figure}
+
+\begin{figure}[tb]
+\centerline{\includegraphics[width=0.5\textwidth]{figure/error_metrics_smoothed_w4.pdf}}
+\caption{Orbital trajectory error metrics across 200 episodes. The baseline agent (blue) minimizes scalar distance rapidly, achieving lower final error states across all orbital elements, but accomplishes this via erratic fuel consumption. The proposed direction-aware agent (orange) exhibits a slightly higher error floor and greater variance in the semi-major axis ($a$).}
+\label{fig:trajectory}
+\end{figure}
+
+\section{Discussion}
+\label{Discussion}
+
+While all configurations successfully reduce orbital error, comparative results highlight a critical trade-off between convergence speed and operational fuel efficiency. The model-free baseline attempts to minimize error rapidly, resulting in erratic, continuous thrusting that heavily depletes fuel. In contrast, the direction-aware reward penalizes wasteful maneuvers by grading action alignment with the theoretical state change $\Delta \mathbf{s} \approx \mathbf{B}\mathbf{u}_t$.
+
+The observed 10\% fuel reduction over the baseline holds direct operational significance. In real spacecraft missions, propellant mass is a primary design constraint dictating launch vehicle sizing, mission duration, and lifetime correction maneuvers capabilities. A policy that executing transfers with less fuel translates directly to reduced launch budgets or extended maneuver reserves for station-keeping. For large-scale low-Earth orbit constellations requiring periodic maintenance, these efficiency gains scale multiplicatively.
+
+Given propellant is a mission-limiting resource, a slightly slower training convergence is a negligible cost compared to the operational value of a fuel-optimized trajectory. Furthermore, the direction alignment term improves interpretability: the learned policy adheres to classical orbital mechanics, making it easier to validate and trust in safety-critical deployments.
+
+\subsection{Reward Complexity and Convergence Behavior}
+
+As shown in Fig.~\ref{fig:reward}, the direction-aware agent consistently earns lower cumulative reward than the baseline throughout training, despite achieving superior fuel efficiency. This paradox stems from the reward function's structure.
+
+The scalar baseline reward is highly permissive, incentivizing any thrust action that minimizes scalar distance to the target orbit. This allows for rapid initial reward growth during early, random exploration. In contrast, the direction-aware reward imposes stricter constraints, requiring the normalized active thrust vector to align with the Jacobian-predicted orbital correction. Misaligned thrusts that incidentally reduce scalar distance remain penalized by the cosine misalignment term, suppressing the reward signal.
+
+This illustrates the \textit{reward complexity trade-off} in reinforcement learning: highly constrained rewards require the policy to satisfy multiple conditions, reducing initial reward gains. However, once the agent adapts, the specific gradient signal actively guides the policy toward physically viable maneuvers rather than indiscriminate thrusting.
+
+Figure~\ref{fig:reward} illustrates this: the baseline reward rises rapidly before stalling at a naive distance-minimization strategy. The proposed reward grows gradually, improving as the policy aligns thrust vectors with orbital correction geometry. This stricter exploration phase results in the fuel savings in Fig.~\ref{fig:fuel}. Slower initial reward accumulation is an inherent feature of enforcing rigorous physical constraints.
+
+\section{Limitations and Future Work}
+\label{FutureWorks}
+
+\subsection{Alignment Penalty Sensitivity}
+\label{Alignment-Penalty}
+The scaling constant $k$ in $R_{\mathrm{align}}$ dictates the relative influence of the directional constraint against the improvement signal $R_{\mathrm{imp}}$. Empirical tests at $k = 2$ and $k = 5$ show the alignment penalty is overwhelmed by $R_{\mathrm{imp}}$, producing behavior indistinguishable from the baseline. The constraint only reshapes the policy effectively at $k = 10$, identifying an approximate lower bound for this task. 
+
+This sensitivity implies $k$ must be tuned relative to $R_{\mathrm{imp}}$ for new orbital scenarios or equinoctial weighting schemes. Furthermore, future work should explore an adaptive $k$ schedule (enforcing strict directional discipline early in training and annealing it later as the policy matures) to improve sample efficiency.
+
+% The scaling constant $k$ in the alignment reward $R_{\mathrm{align}}$ is a critical hyperparameter that governs the relative influence of the directional constraint against the baseline improvement signal $R_{\mathrm{imp}}$. Empirical evaluation at $k = 2$ and $k = 5$ revealed that at these lower values the alignment penalty is consistently overwhelmed by $R_{\mathrm{imp}}$, resulting in agent behavior statistically indistinguishable from the model-free baseline. The directional constraint only begins to meaningfully reshape the policy at $k = 10$, which we identify as an approximate lower bound for effective alignment enforcement in this environment and task configuration.
+
+% This sensitivity has two practical implications. First, $k$ must be tuned relative to the scale of $R_{\mathrm{imp}}$ for each new task. A practitioner transferring this method to a different orbital scenario or a different equinoctial weighting scheme $\alpha_i$ should recalibrate $k$ accordingly. Second, it suggests that an adaptive $k$ schedule (starting high to enforce strong directional discipline early in training, then annealing as the policy matures) could reduce sensitivity to the initial choice and improve sample efficiency. We leave this to future work.
+
+\subsection{First-Order Linearization Validity}
+The alignment metric relies on a first-order Taylor expansion ($\Delta \mathbf{s} \approx \mathbf{B}\mathbf{u}_t$), assuming the discrete timestep $\Delta t$ and thrust magnitude remain small. For large impulsive burns or extended continuous thrusting, higher-order nonlinear dynamics ($\mathcal{O}(\|\mathbf{u}_t\|^2)$) become significant. Here, the predicted direction $d\mathbf{x}_{\mathrm{pred}}$ may diverge from true orbital evolution, potentially penalizing correct high-energy maneuvers. Future implementations should investigate second-order Hessian approximations or adaptive timestep sizing during high-energy transfers.
+
+% The alignment metric relies on a first-order Taylor expansion ($\Delta \mathbf{s} \approx \mathbf{B}\mathbf{u}_t$), which assumes that both the discrete timestep $\Delta t$ and the applied thrust magnitude are sufficiently small for the linearization to hold. In scenarios requiring large impulsive burns or extended continuous thrusting, the higher-order nonlinear dynamics ($\mathcal{O}(\|\mathbf{u}_t\|^2)$) become significant, and the predicted direction $d\mathbf{x}_{\mathrm{pred}}$ may diverge from the true orbital evolution. Under such conditions, the alignment reward may penalize physically correct high-energy maneuvers. Future work could explore second-order Hessian approximations or adaptive timestep sizing to maintain geometric validity during high-energy transfers.
+
+\subsection{Semi-Major Axis Convergence}
+A normalization mismatch in the OrbitZoo baseline implementation imposes a convergence ceiling near $2 \times 10^4$ meters on the semi-major axis error. This precludes a full evaluation of the proposed method's accuracy regarding $\Delta a$. Resolving this discrepancy by consistently scaling both the observed and target states is necessary to determine if the Jacobian alignment reward achieves tighter tolerances. We recommend future RL-based orbital control research explicitly validates state and target normalization to prevent unintended inflation of reported accuracy metrics.
+
+% The normalization mismatch identified in the OrbitZoo baseline implementation imposes a convergence ceiling of approximately $2 \times 10^4$ meters on the semi-major axis error for both agents. This prevents a full evaluation of the accuracy of the proposed method in $\Delta a$. Resolving the normalization discrepancy by applying consistent scaling to both the observed state and the target state is a prerequisite for assessing whether the Jacobian alignment reward can drive the semi-major axis to tighter tolerances. We recommend that future work on RL-based orbital control explicitly validates state and target normalization before reporting convergence metrics, as inconsistent scaling can silently distort both the reward signal and published accuracy figures.
+
+\subsection{Multi-Agent Extension}
+The current work evaluates a single-agent Hohmann transfer scenario. Extending the direction-aware reward to multi-agent settings introduces additional challenges: thrust vectors from one satellite may alter the orbital environment of neighboring satellites, and collision avoidance constraints must be jointly satisfied alongside fuel efficiency objectives. Incorporating the alignment reward into a cooperative or competitive multi-agent PPO framework \cite{terry2021pettingzoo} is a natural and practically important direction for future research.
+
+\section{Conclusion}
+\label{Conclusion}
+
+This paper proposed a direction-aware reward shaping method for fuel-efficient orbital transfer using reinforcement learning. By integrating Jacobian mechanics directly into the reward function through a first-order Taylor linearization of the orbital state transition, the proposed approach provides the RL agent with explicit mathematical guidance grounded in classical astrodynamics. The alignment reward penalizes thrust vectors that violate theoretical orbital physics, effectively constraining exploration to physically viable maneuvers.
+
+Experimental evaluation on a Hohmann transfer scenario demonstrated that the proposed method achieves strict convergence, driving eccentricity and inclination errors below the 0.005 and 0.001 tolerances, respectively, while reducing average peak fuel consumption by approximately 10\% compared to the model-free baseline. Empirical sensitivity analysis further revealed that the alignment penalty requires $k \geq 10$ to overcome the baseline improvement signal and meaningfully constrain agent behavior. This fuel efficiency gain, combined with improved geometric accuracy and policy interpretability, confirms that embedding physical domain knowledge into reward design is a productive and principled strategy for spacecraft control.
+
+%\section*{Acknowledgments}
+
+%\bibliographystyle{ieicetr}
+%\bibliography{myrefs}
+
+\begin{thebibliography}{99}
+% 1
+\bibitem{zaidi2023cascaded}
+S. M. T. Zaidi, P. Chadalavada, H. Ullah, A. Munir, and A. Dutta, ``Cascaded deep reinforcement learning-based multi-revolution low-thrust spacecraft orbit-transfer,'' \textit{IEEE Access}, vol. 11, pp. 82894--82911, 2023. %DOI:10.1109/ACCESS.2023.3301726
+% 2
+\bibitem{bonasera2023stationkeeping}
+S. Bonasera, N. Bosanac, C. J. Sullivan, I. Elliott, N. Ahmed, and J. W. McMahon, ``Designing Sun--Earth L2 halo orbit stationkeeping maneuvers via reinforcement learning,'' \textit{J. Guid. Control Dyn.}, vol. 46, no. 2, pp. 301--311, 2023. %DOI:10.2514/1.G006783
+% 3
+\bibitem{kazemi2024}
+S. Kazemi, N. L. Azad, K. A. Scott, H. B. Oqab, and G. B. Dietrich, ``Satellite collision avoidance maneuver planning in low earth orbit using proximal policy optimization,'' \textit{Proc. 2024 IEEE Congress on Evolutionary Computation (CEC)}, pp. 1--9, 2024. %DOI:10.1109/CEC60901.2024.10611892
+% 4
+\bibitem{qu2022spacecraft}
+Q. Qu, K. Liu, W. Wang, and J. L\"{u}, ``Spacecraft proximity maneuvering and rendezvous with collision avoidance based on reinforcement learning,'' \textit{IEEE Trans. Aerosp. Electron. Syst.}, vol. 58, no. 6, pp. 5823--5834, 2022. %DOI:10.1109/TAES.2022.3180271
+% 5
+\bibitem{tipaldi2022}
+M. Tipaldi, R. Iervolino, and P. R. Massenio, ``Reinforcement learning in spacecraft control applications: advances, prospects, and challenges,'' \textit{Annu. Rev. Control}, vol. 54, pp. 1--23, 2022. %DOI:10.1016/j.arcontrol.2022.07.004
+% 6
+\bibitem{schulman2017ppo}
+J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov, ``Proximal policy optimization algorithms,'' \textit{arXiv preprint arXiv:1707.06347}, 2017.
+% 7
+\bibitem{orbitzoo}
+A. Oliveira, K. Dyreby, F. Caldas, and C. Soares, ``OrbitZoo: multi-agent reinforcement learning environment for orbital dynamics,'' NOVA LINCS, NOVA School of Science and Technology, Mar. 2025.
+% 8
+\bibitem{orekit}
+L. Maisonobe, P. Parraud, and V. Pommier-Maurussane, ``Orekit: an open source library for operational flight dynamics applications,'' \textit{Proc. 4th Int. Conf. on Astrodynamics Tools and Techniques (ICATT)}, Madrid, Spain, pp. 15--18, 2010.
+% 9
+\bibitem{retagne2024adaptive}
+W. Retagne, J. Dauer, and G. Waxenegger-Wilfing, ``Adaptive satellite attitude control for varying masses using deep reinforcement learning,'' \textit{Front. Robot. AI}, vol. 11:1402846, 2024. %DOI:10.3389/frobt.2024.1402846
+% 10
+% \bibitem{iannelli2022mpc}
+% P. Iannelli, F. Angeletti, and P. Gasbarri, ``A model predictive control for attitude stabilization and spin control of a spacecraft with a flexible rotating payload,'' \textit{Acta Astronaut.}, vol. 199, pp. 401--411, Jul. 2022. %DOI:10.1016/j.actaastro.2022.07.024
+
+\bibitem{herrmann2023comparative}
+A. Herrmann and H. Schaub, ``A comparative analysis of reinforcement learning algorithms for earth-observing satellite scheduling,'' \textit{Front. Space Technol.}, 2023. %DOI:10.3389/frspt.2023.1263489
+% 11
+\bibitem{scorsoglio2023relative}
+A. Scorsoglio, R. Furfaro, R. Linares, and M. Massari, ``Relative motion guidance for near-rectilinear lunar orbits with path constraints via actor-critic reinforcement learning,'' \textit{Adv. Space Res.}, vol. 71, no. 1, pp. 316--335, 2023. %DOI:10.1016/j.asr.2022.08.002
+% 12
+\bibitem{Zavoli2020RL_low_thrust}
+A. Zavoli and L. Federici, ``Reinforcement learning for low-thrust trajectory design of interplanetary missions,'' \textit{arXiv preprint arXiv:2008.08501}, 2020.
+% 13
+\bibitem{hovell2021deep}
+K. Hovell and S. Ulrich, ``Deep reinforcement learning for spacecraft proximity operations guidance,'' \textit{J. Spacecr. Rockets}, vol. 58, no. 2, pp. 254--264, Jan. 2021. DOI:10.2514/1.A34838
+% 14
+\bibitem{federici2021deep}
+L. Federici, B. Benedikter, and A. Zavoli, ``Deep learning techniques for autonomous spacecraft guidance during proximity operations,'' \textit{J. Spacecr. Rockets}, vol. 58, pp. 1--12, Aug. 2021. %DOI:10.2514/1.A35076
+% 15
+\bibitem{xu2023optimal}
+L. Xu, G. Zhang, S. Qiu, and X. Cao, ``Optimal multi-impulse linear rendezvous via reinforcement learning,'' \textit{Space Sci. Technol.}, vol. 3:0047, 2023. %DOI:10.34133/space.0047
+% 16
+\bibitem{terry2021pettingzoo}
+J. K. Terry, B. Black, N. Grammel, M. Jayakumar, A. Hari, R. Sullivan, L. Santos, R. Perez, C. Horsch, C. Dieffendahl, N. L. Williams, Y. Lokesh, and P. Ravi, ``PettingZoo: gym for multi-agent reinforcement learning,'' \textit{arXiv preprint arXiv:2009.14471}, 2021.
+
+% ลบได้ เป็นแบบ continuous control (mentioned only in future work) maybe ommited? idk
+% \bibitem{schulman2015gae}
+% J. Schulman, P. Moritz, S. Levine, M. Jordan, and P. Abbeel, ``High-dimensional continuous control using generalized advantage estimation,'' \textit{arXiv preprint arXiv:1506.02438}, 2018.
+
+% เป็น RL ใช้ Jaccobian ดูดีเลยนะแต่ไม่รู้จะใส่ตรงไหนดี
+% \bibitem{federici2022meta}
+% L. Federici, A. Scorsoglio, A. Zavoli, and R. Furfaro, ``Meta-reinforcement learning for adaptive spacecraft guidance during finite-thrust rendezvous missions,'' \textit{Acta Astronaut.}, vol. 201, pp. 129--141, 2022. %DOI:10.1016/j.actaastro.2022.08.047
+
+% Not seem to related at all
+% \bibitem{ding2023magnetic}
+% H. Ding, Y. Tang, Q. Wu, B. Wang, C. Chen, and Z. Wang, ``Magnetic field-based reward shaping for goal-conditioned reinforcement learning,'' \textit{IEEE/CAA J. Autom. Sinica}, vol. 10, no. 12, pp. 2233--2247, Dec. 2023. DOI:10.1109/jas.2023.123477
+
+% ลบได้ Not related
+% \bibitem{ikeya2023reference}
+% K. Ikeya, K. Liu, A. Girard, and I. Kolmanovsky, ``Learning reference governor for constrained spacecraft rendezvous and proximity maneuvering,'' \textit{J. Spacecr. Rockets}, vol. 60, no. 4, pp. 1127--1141, 2023. %DOI:10.2514/1.A35483
+
+% ลบได้ Not related
+% \bibitem{zhang2023marl}
+% G. Zhang, X. Li, G. Hu, Y. Li, X. Wang, and Z. Zhang, ``MARL-based multi-satellite intelligent task planning method,'' \textit{IEEE Access}, vol. 11, pp. 135517--135528, 2023. %DOI:10.1109/ACCESS.2023.3337358
+
+\end{thebibliography}
+
+\profile[a1.pdf]{Julathit Chetsawang}{is pursuing the B.Eng. degree in Computer Engineering at Sirindhorn International Institute of Technology, Thailand. He was previously with the NECTEC, Thailand. In 2026, he was an intern studying legged robot locomotion at Kansai University, Japan. His research interests include robotics, robot software design, and machine learning. He is currently the Head of Software Design of the OrcaBOT robotics team.}
+\label{profile:chetsawang}
+
+\profile[a2.pdf]{Warit Yuvaniyama}{is pursuing the B.Eng. degree in Computer Engineering at Sirindhorn International Institute of Technology, Thailand. From 2024 to 2025, he was an intern with NECTEC, NSTDA, Thailand. In 2026, he was an intern with the Measurement and Intelligent Systems Department, Kansai University, Japan. His research interests include robotics, embedded systems, and on-device machine learning. He is currently the President and Embedded Systems Lead of the OrcaBOT robotics team.}
+\label{profile:yuvaniyama}
+
+\profile[a3.pdf]{Prachya Boonkwan}{received the B.Eng. and M.Eng. degrees in Computer Engineering from Kasetsart University, Thailand, and the Ph.D. degree in Informatics from the University of Edinburgh, U.K. He is currently a Lecturer with the School of ICT at the Sirindhorn International Institute of Technology, Thammasat University, Thailand. His research interests include NLP, computational linguistics, and machine learning.}
+\label{profile:boonkwan}
+
+\end{document}
