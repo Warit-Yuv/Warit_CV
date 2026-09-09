@@ -1,7 +1,12 @@
 # Warit Yuvaniyama (Note)
 
 <p align="center">
-  <img src="assets/portrait.png" width="140" alt="Warit Yuvaniyama"/>
+  <img src="assets/portrait.png" width="140" alt="Warit Yuvaniyama"/><br/>
+  <a href="https://warit-yuv.github.io/Warit_CV/Resume.pdf"><img src="https://img.shields.io/badge/PDF-Interactive_Resume-blue?logo=adobeacrobatreader" alt="Interactive Resume"/></a>
+  <a href="https://warit-yuv.github.io/Warit_CV/Warit_CV.pdf"><img src="https://img.shields.io/badge/PDF-Interactive_CV-blue?logo=adobeacrobatreader" alt="Interactive CV"/></a>
+  <a href="https://www.linkedin.com/in/warit-yuvaniyama/"><img src="https://img.shields.io/badge/LinkedIn-warit--yuvaniyama-0A66C2?logo=linkedin" alt="LinkedIn"/></a>
+  <a href="mailto:warit.yuv@gmail.com"><img src="https://img.shields.io/badge/Email-warit.yuv@gmail.com-EA4335?logo=gmail" alt="Email"/></a>
+  <a href="https://github.com/Warit-Yuv/Warit_CV/actions/workflows/build.yml"><img src="https://github.com/Warit-Yuv/Warit_CV/actions/workflows/build.yml/badge.svg" alt="Build CVs"/></a>
 </p>
 
 Fourth-year Computer Engineering student at Sirindhorn International Institute of Technology (SIIT), Thammasat University. CGPA 3.92, recipient of the Academic Outstanding Student Scholarship.
@@ -10,16 +15,14 @@ I like exploring many fields, and what keeps me going is seeing the things I bui
 
 The biggest of these is OrcaBOT, the SIIT Robotic Club I'm currently President of. Being club president (managing teams, budgets, procurement) and embedded systems lead (communication, control, microcontrollers, the low-level stuff) taught me how much invisible work sits between "we have parts" and "we have a robot." Our team built ours from close to nothing to a functioning machine competing in the Small Size League at RoboCup Japan Open 2025, and I'm really proud of that. I also enjoy the business side of engineering: analyzing problems and turning them into pitches, which has led to a few hackathon and startup competition wins. I genuinely like working across cultures; meeting new, interesting people from other countries is half the fun of the international projects.
 
-[![Build CVs](https://github.com/Warit-Yuv/Warit_CV/actions/workflows/build.yml/badge.svg)](https://github.com/Warit-Yuv/Warit_CV/actions/workflows/build.yml)
-
 ## My CV
 
 Full details are in the documents below. GitHub Actions recompiles them from the LaTeX sources on every push, so what's committed here is current.
 
 | Document | First page | Download |
 |---|---|---|
-| CV (extended, complete record) | ![](assets/Warit_CV_p1.png) | [Warit_CV.pdf](Warit_CV.pdf) |
-| Resume (1–2 pages) | ![](assets/Resume_p1.png) | [Resume.pdf](Resume.pdf) |
+| **Resume** | ![](assets/Resume_p1.png) | [Resume.pdf](https://warit-yuv.github.io/Warit_CV/Resume.pdf) |
+| **Full CV** | ![](assets/Warit_CV_p1.png) | [Warit_CV.pdf](https://warit-yuv.github.io/Warit_CV/Warit_CV.pdf) |
 
 ## Research
 
@@ -51,7 +54,7 @@ Some of this work has taken me abroad. The two-month research internship at Kans
 
 ## Contact
 
-- Email: [6622770459@g.siit.tu.ac.th](mailto:6622770459@g.siit.tu.ac.th)
+- Email: [warit.yuv@gmail.com](mailto:warit.yuv@gmail.com)
 - LinkedIn: [warit-yuvaniyama](https://www.linkedin.com/in/warit-yuvaniyama/)
 - GitHub: [@Warit-Yuv](https://github.com/Warit-Yuv)
 
