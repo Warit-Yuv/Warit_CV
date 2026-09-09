@@ -28,7 +28,8 @@ jobs:
 
       - name: Compress PDFs (300 DPI)
         run: |
-          sudo apt-get update && sudo apt-get install -y ghostscript
+          sudo apt-get update || echo "::warning::apt-get update had non-fatal mirror issues, continuing with install..."
+          sudo apt-get install -y ghostscript
           for pdf in Warit_CV.pdf Resume.pdf; do
             if [ -f "$pdf" ]; then
               gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/printer \
