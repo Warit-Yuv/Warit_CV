@@ -42,13 +42,16 @@ jobs:
         run: |
           sudo apt-get install -y poppler-utils
           mkdir -p assets
-          pdftoppm -png -r 110 -f 1 -l 2 Warit_CV.pdf assets/Warit_CV_preview
-          pdftoppm -png -r 110 -f 1 -l 2 Resume.pdf assets/Resume_preview
-          mv assets/Warit_CV_preview-1.png assets/Warit_CV_p1.png 2>/dev/null || true
-          mv assets/Warit_CV_preview-2.png assets/Warit_CV_p2.png 2>/dev/null || true
-          mv assets/Resume_preview-1.png assets/Resume_p1.png 2>/dev/null || true
-          mv assets/Resume_preview-2.png assets/Resume_p2.png 2>/dev/null || true
-          ls assets
+          # Clean old previews
+          rm -f assets/Warit_CV_p*.png assets/Resume_p*.png assets/*_preview*
+          # Convert all pages and rename with mv
+          pdftoppm -png -r 150 Warit_CV.pdf assets/Warit_CV_preview
+          pdftoppm -png -r 150 Resume.pdf assets/Resume_preview
+          for f in assets/*_preview-*.png; do
+            [ -e "$f" ] || continue
+            mv "$f" "${f//_preview-/_p}"
+          done
+          ls -lh assets/
 
       - name: Commit updated PDFs and previews
         run: |
