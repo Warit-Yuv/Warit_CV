@@ -28,6 +28,7 @@ jobs:
 
       - name: Compress PDFs (300 DPI)
         run: |
+          sudo apt-get update && sudo apt-get install -y ghostscript
           for pdf in Warit_CV.pdf Resume.pdf; do
             if [ -f "$pdf" ]; then
               gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/printer \
@@ -39,7 +40,7 @@ jobs:
 
       - name: Generate preview images
         run: |
-          sudo apt-get update && sudo apt-get install -y poppler-utils
+          sudo apt-get install -y poppler-utils
           mkdir -p assets
           pdftoppm -png -r 110 -f 1 -l 2 Warit_CV.pdf assets/Warit_CV_preview
           pdftoppm -png -r 110 -f 1 -l 2 Resume.pdf assets/Resume_preview
