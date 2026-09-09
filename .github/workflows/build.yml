@@ -26,6 +26,17 @@ jobs:
             Resume.tex
           latexmk_use_lualatex: false
 
+      - name: Compress PDFs (300 DPI)
+        run: |
+          for pdf in Warit_CV.pdf Resume.pdf; do
+            if [ -f "$pdf" ]; then
+              gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/printer \
+                 -dNOPAUSE -dQUIET -dBATCH \
+                 -sOutputFile="${pdf}.tmp" "$pdf"
+              mv "${pdf}.tmp" "$pdf"
+            fi
+          done
+
       - name: Generate preview images
         run: |
           sudo apt-get update && sudo apt-get install -y poppler-utils
